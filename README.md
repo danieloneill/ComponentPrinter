@@ -87,20 +87,20 @@ Window {
 
     Rectangle {
         id: myAmazingComponent
-	color: 'red'
+        color: 'red'
 
-	width: 300
-	height: 300
-	anchors.centerIn: parent
+        width: 300
+        height: 300
+        anchors.centerIn: parent
 
-	Rectangle {
-	    id: alsoAmazing
-	    color: 'blue'
+        Rectangle {
+            id: alsoAmazing
+            color: 'blue'
 
-	    width: 150
-	    height: 150
-	    anchors.centerIn: parent
-	}
+            width: 150
+            height: 150
+            anchors.centerIn: parent
+        }
     }
 
 
