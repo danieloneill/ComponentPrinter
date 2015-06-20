@@ -7,8 +7,8 @@
 Printer::Printer(QQuickItem *parent):
     QQuickItem(parent)
 {
+    m_printer = new QPrinter();
     m_antialias = false;
-    m_dpi = 600;
     m_item = NULL;
     m_savingToFile = true;
     m_margins = QRectF(0, 0, 0, 0);
@@ -16,6 +16,7 @@ Printer::Printer(QQuickItem *parent):
 
 Printer::~Printer()
 {
+    delete m_printer;
 }
 
 bool Printer::print()
@@ -31,6 +32,117 @@ bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int 
     m_fileType = fileFormat;
     m_fileQuality = quality;
     return grab();
+}
+
+QPrinter::Unit qprinterUnitFromPrinterUnit(Printer::Unit unit)
+{
+    QPrinter::Unit punit;
+    switch( unit )
+    {
+    case Printer::Millimeter:
+        punit = QPrinter::Millimeter;
+        break;
+    case Printer::Point:
+        punit = QPrinter::Point;
+        break;
+    case Printer::Pica:
+        punit = QPrinter::Pica;
+        break;
+    case Printer::Inch:
+        punit = QPrinter::Inch;
+        break;
+    case Printer::Didot:
+        punit = QPrinter::Didot;
+        break;
+    case Printer::Cicero:
+        punit = QPrinter::Cicero;
+        break;
+    case Printer::DevicePixel:
+        punit = QPrinter::DevicePixel;
+        break;
+    default:
+        punit = (QPrinter::Unit)unit;
+    }
+    return punit;
+}
+
+QRectF Printer::getPageRect(Unit unit)
+{
+    return m_printer->pageRect( qprinterUnitFromPrinterUnit(unit) );
+}
+
+QRectF Printer::getPaperRect(Unit unit)
+{
+    return m_printer->paperRect( qprinterUnitFromPrinterUnit(unit) );
+}
+
+QStringList Printer::getPaperSizes()
+{
+    QStringList results;
+    QPageSize size;
+    // Run through each..
+    for( int x=0; x < QPageSize::LastPageSize; x++ )
+    {
+        size = QPageSize((QPageSize::PageSizeId)x);
+        results.append( size.name() );
+    }
+    return results;
+}
+
+bool Printer::setPageSize( const QString &paperSize )
+{
+    QPageSize size;
+    // Run through each..
+    for( int x=0; x < QPageSize::LastPageSize; x++ )
+    {
+        size = QPageSize((QPageSize::PageSizeId)x);
+        if( size.name() == paperSize )
+        {
+            bool result = m_printer->setPageSize( size );
+            emit sizeChanged();
+            return result;
+        }
+    }
+
+    qDebug() << "Unknown paper size: " << paperSize << " (Refer to 'paperSizes()' for valid options.)";
+    return false;
+}
+
+bool Printer::setPageSize( qreal width, qreal height, Unit unit )
+{
+    QSizeF szf(width, height);
+    QPageSize size;
+
+    switch( unit )
+    {
+    case Millimeter:
+        size = QPageSize(szf, QPageSize::Millimeter);
+        break;
+    case Point:
+        size = QPageSize(szf, QPageSize::Point);
+        break;
+    case Inch:
+        size = QPageSize(szf, QPageSize::Inch);
+        break;
+    case Pica:
+        size = QPageSize(szf, QPageSize::Pica);
+        break;
+    case Didot:
+        size = QPageSize(szf, QPageSize::Didot);
+        break;
+    case Cicero:
+        size = QPageSize(szf, QPageSize::Cicero);
+        break;
+    case DevicePixel:
+        // Fanagle from DPI:
+        szf /= m_printer->resolution();
+        size = QPageSize(szf, QPageSize::Inch);
+        break;
+    }
+
+    bool result = m_printer->setPageSize(size);
+    emit sizeChanged();
+    return result;
 }
 
 bool Printer::grab()
@@ -66,21 +178,19 @@ void Printer::grabbed()
     else
     {
         if( !m_filepath.isEmpty() )
-            m_printer.setOutputFileName(m_filepath);
+            m_printer->setOutputFileName(m_filepath);
 
-        m_printer.setResolution(m_dpi);
-        m_printer.setPaperSize( QSizeF( m_printwidth, m_printheight ), QPrinter::Millimeter );
-        m_printer.setPageMargins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom(), QPrinter::Millimeter );
+        m_printer->setPageMargins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom(), QPrinter::Millimeter );
 
         QPainter painter;
-        painter.begin(&m_printer);
+        painter.begin(m_printer);
         painter.setRenderHint(QPainter::Antialiasing, false);
         painter.setRenderHint(QPainter::TextAntialiasing, false);
         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
         painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
-        painter.fillRect( m_printer.paperRect(), qRgba(255, 255, 255, 255) );
-        painter.drawImage( m_printer.paperRect(), img );
+        painter.fillRect( m_printer->paperRect(), qRgba(255, 255, 255, 255) );
+        painter.drawImage( m_printer->paperRect(), img );
 
         painter.end();
         ret = true;
@@ -103,23 +213,34 @@ void Printer::setItem(QQuickItem *item)
      emit itemChanged();
 }
 
-bool Printer::setup()
+PrinterOptions *Printer::setup()
 {
 #ifdef Q_OS_WIN32
-    m_printer.setOutputFormat(QPrinter::NativeFormat);
+    m_printer->setOutputFormat(QPrinter::NativeFormat);
 #endif
 
     if( m_printDialogue.exec() == QDialog::Accepted )
     {
-        setPrinterName(m_printDialogue.printer()->printerName());
-        setFilePath(m_printDialogue.printer()->outputFileName());
-        setDpi(m_printDialogue.printer()->resolution());
-        setPrintHeight(m_printDialogue.printer()->pageSizeMM().height());
-        setPrintWidth(m_printDialogue.printer()->pageSizeMM().width());
-        return true;
+        QPrinterInfo opts( *m_printDialogue.printer() );
+        PrinterOptions *popts = new PrinterOptions(this);
+        popts->opts = opts;
+        return popts;
     }
 
-    return false;
+    return NULL;
+}
+
+void Printer::setOptions( PrinterOptions *p )
+{
+
+    int dpi = m_printer->resolution();
+    QPagedPaintDevice::PageSize sz = m_printer->pageSize();
+
+    delete m_printer;
+    m_printer = new QPrinter(p->opts);
+
+    if( dpi != m_printer->resolution() || sz != m_printer->pageSize() )
+        emit sizeChanged();
 }
 
 void Printer::setMargins(double top, double right, double bottom, double left)
@@ -134,14 +255,14 @@ void Printer::setMargins(double top, double right, double bottom, double left)
 
 void Printer::setPrinterName(const QString &printerName)
 {
-    if( m_printer.printerName() == printerName )
+    if( m_printer->printerName() == printerName )
         return;
 
-    m_printer.setPrinterName( printerName );
+    m_printer->setPrinterName( printerName );
     emit printerNameChanged();
 }
 
 QString Printer::getPrinterName()
 {
-    return m_printer.printerName();
+    return m_printer->printerName();
 }
