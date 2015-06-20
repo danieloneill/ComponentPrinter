@@ -44,6 +44,7 @@ class Printer : public QQuickItem
     Q_PROPERTY(QRectF paperRect READ getPaperRect NOTIFY sizeChanged)
     Q_PROPERTY(QStringList paperSizes READ getPaperSizes)
     Q_PROPERTY(QString printerName READ getPrinterName WRITE setPrinterName NOTIFY printerNameChanged)
+    Q_PROPERTY(Status status READ getStatus)
 
 public:
     Printer(QQuickItem *parent = 0);
@@ -59,6 +60,15 @@ public:
         DevicePixel
     } Unit;
     Q_ENUMS(Unit)
+
+    typedef enum {
+        Idle,
+        Active,
+        Aborted,
+        Error,
+        Unknown
+    } Status;
+    Q_ENUMS(Status)
 
 public slots:
     bool print();
@@ -85,6 +95,7 @@ public slots:
     QStringList getPaperSizes();
     QString getPrinterName();
     int getResolution() { return m_printer->resolution(); }
+    Status getStatus();
 
 private slots:
     bool grab();
@@ -96,6 +107,7 @@ signals:
     void itemChanged();
     void marginsChanged();
     void printComplete();
+    void printError();
     void printerNameChanged();
     void resolutionChanged();
     void sizeChanged();

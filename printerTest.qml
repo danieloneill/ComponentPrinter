@@ -39,6 +39,10 @@ Window {
         item: pageRect
         antialias: false
 
+        onPrintComplete: {
+            console.log('Print success.');
+        }
+
         Component.onCompleted: {
             console.log( "Sizes: " );
             var sz = printer.paperSizes;
@@ -70,6 +74,7 @@ Window {
                 printer.setOptions( opts );
                 // However when you call setOptions any previously specified parameters may be replaced.
 
+                delete opts; // Or don't.
                 printer.print();
             }
 

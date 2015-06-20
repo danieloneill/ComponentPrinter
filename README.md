@@ -44,6 +44,14 @@ Printer {
 * string printerName
   * the name of the destination printer
 
+* Status status
+  * the printer's current status (if supported). unfortunately this property has no 'changed' signal. can be one of:
+    * Printer::Idle
+    * Printer::Active
+    * Printer::Aborted
+    * Printer::Error
+    * Printer::Unknown
+
 
 ### Methods:
 
@@ -99,6 +107,13 @@ Printer {
     * Printer::Cicero
     * Printer::DevicePixel
 
+* Status getStatus()
+  * the printer's current status (if supported).  can be one of:
+    * Printer::Idle
+    * Printer::Active
+    * Printer::Aborted
+    * Printer::Error
+    * Printer::Unknown
 
 #### Property Hooks: (See the respective property documentation for details.)
 

@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QPainter>
+#include <QPrintEngine>
 #include <QQuickItemGrabResult>
 
 Printer::Printer(QQuickItem *parent):
@@ -104,7 +105,7 @@ bool Printer::setPageSize( const QString &paperSize )
         }
     }
 
-    qDebug() << "Unknown paper size: " << paperSize << " (Refer to 'paperSizes()' for valid options.)";
+    qWarning() << "Unknown paper size: " << paperSize << " (Refer to 'paperSizes()' for valid options.)";
     return false;
 }
 
@@ -145,18 +146,35 @@ bool Printer::setPageSize( qreal width, qreal height, Unit unit )
     return result;
 }
 
+Printer::Status Printer::getStatus()
+{
+    QPrinter::PrinterState state = m_printer->printEngine()->printerState();
+    switch( state )
+    {
+        case QPrinter::Idle:
+            return Idle;
+        case QPrinter::Active:
+            return Active;
+        case QPrinter::Aborted:
+            return Aborted;
+        case QPrinter::Error:
+            return Error;
+    }
+    return Unknown;
+}
+
 bool Printer::grab()
 {
     if( !m_item )
     {
-        qDebug() << "Printer::grab: No item source specified. (Set it with the 'item' property.)";
+        qWarning() << "Printer::grab: No item source specified. (Set it with the 'item' property.)";
         return false;
     }
 
     QSharedPointer<QQuickItemGrabResult> res = m_item->grabToImage();
     if( !res )
     {
-        qDebug() << "Printer::saveImage: Grab failed for some reason. (Is the item visible and rendered?)";
+        qWarning() << "Printer::saveImage: Grab failed for some reason. (Is the item visible and rendered?)";
         return false;
     }
 
@@ -197,11 +215,9 @@ void Printer::grabbed()
     }
 
     if( ret )
-        qDebug() << "Print Success.";
+        emit printComplete();
     else
-        qDebug() << "Print Failed.";
-
-    emit printComplete();
+        emit printError();
 }
 
 void Printer::setItem(QQuickItem *item)
