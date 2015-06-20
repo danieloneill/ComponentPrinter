@@ -62,17 +62,14 @@ Printer {
 * bool saveImage(string fileName, string fileFormat, int quality)
   * save an image of the component to an image file.
 
-* PrinterOptions setup()
-  * display a print dialogue. returns a PrinterOptions object for use with 'setOptions' if the user clicks 'print', null otherwise.
+* bool setup()
+  * display a print dialogue. configures the printer context and returns true if the user clicks 'print', false otherwise.
 
 * setMargins( double top, double right, double bottom, double left )
   * sets the page margins (auto-set by 'setup' method)
 
 * QRectF getMargins()
   * returns a QRectF representing the currently set margins. 'x', 'y', 'width', and 'height' are the pertinent properties of the returned object.
-
-* void setOptions( PrinterOptions options )
-  * configure to print using the specified options object.
 
 * bool setPageSize( int width, int height, Unit unit )
   * configure the page size to a custom size. valid units are:
@@ -136,7 +133,10 @@ Printer {
 
 
 * printComplete
-  * when the component is printer this signal will be emitted.
+  * when the component successfully prints this signal will be emitted.
+
+* printError
+  * when the component unsuccessfully prints this signal will be emitted.
 
 * antialiasChanged
   * antialiasing setting changed
@@ -179,23 +179,30 @@ Window {
         color: 'white'
         width: printer.pageRect.width // When one sets a size using the 'setPageSize' method, this changes.
         height: printer.pageRect.height // When one sets a size using the 'setPageSize' method, this changes.
-        visible: false // Can be true or false, still works!
+        //visible: false // Can be true or false, still works!
 
         Rectangle {
             id: myAmazingComponent
             color: 'red'
 
-            width: 300
-            height: 300
+            width: parent.width * 0.25
+            height: parent.width * 0.25
             anchors.centerIn: parent // Or position it anywhere on your page.
 
             Rectangle {
                 id: alsoAmazing
                 color: 'blue'
 
-                width: 150
-                height: 150
+                width: parent.width * 0.5
+                height: parent.width * 0.5
                 anchors.centerIn: parent
+
+                Text {
+                    anchors.centerIn: parent
+                    font.pixelSize: parent.height * 0.5
+                    color: 'white'
+                    text: ''+printer.page
+                }
             }
         }
     }
@@ -204,6 +211,21 @@ Window {
         id: printer
         item: pageRect
         antialias: false
+
+        property int page: 1
+
+        onPrintComplete: {
+            console.log('Page '+page+' printed.');
+            if( printer.page < 4 )
+            {
+                // Pretend we're printing multiple pages here...
+                printer.page++;
+                printer.print();
+            }
+        }
+        onPrintError: {
+            console.log("Print error!");
+        }
 
         Component.onCompleted: {
             console.log( "Sizes: " );
@@ -229,18 +251,12 @@ Window {
         }
         text: 'Print'
         onClicked: {
-            var opts = printer.setup();
-            if( opts )
-            {
-                // If you don't do this any changes to the settings (in the dialogue) will be ignored:
-                printer.setOptions( opts );
-                // However when you call setOptions any previously specified parameters may be replaced.
-
+            if( printer.setup() )
                 printer.print();
-            }
 
             //printer.saveImage("test.png", 'png', 100);
         }
     }
 }
+
 ```

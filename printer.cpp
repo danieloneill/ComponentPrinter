@@ -229,34 +229,22 @@ void Printer::setItem(QQuickItem *item)
      emit itemChanged();
 }
 
-PrinterOptions *Printer::setup()
+bool Printer::setup()
 {
 #ifdef Q_OS_WIN32
     m_printer->setOutputFormat(QPrinter::NativeFormat);
 #endif
 
-    if( m_printDialogue.exec() == QDialog::Accepted )
+    m_printDialogue = new QPrintDialog(m_printer);
+    if( m_printDialogue->exec() == QDialog::Accepted )
     {
-        QPrinterInfo opts( *m_printDialogue.printer() );
-        PrinterOptions *popts = new PrinterOptions(this);
-        popts->opts = opts;
-        return popts;
+        m_printDialogue->deleteLater();
+        return true;
     }
 
-    return NULL;
-}
+    delete m_printDialogue;
 
-void Printer::setOptions( PrinterOptions *p )
-{
-
-    int dpi = m_printer->resolution();
-    QPagedPaintDevice::PageSize sz = m_printer->pageSize();
-
-    delete m_printer;
-    m_printer = new QPrinter(p->opts);
-
-    if( dpi != m_printer->resolution() || sz != m_printer->pageSize() )
-        emit sizeChanged();
+    return false;
 }
 
 void Printer::setMargins(double top, double right, double bottom, double left)

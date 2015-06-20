@@ -3,19 +3,7 @@
 
 #include <QPrinter>
 #include <QPrintDialog>
-#include <QPrinterInfo>
 #include <QQuickItem>
-
-class PrinterOptions : public QObject
-{
-    Q_OBJECT
-    Q_DISABLE_COPY(PrinterOptions)
-
-public:
-    PrinterOptions(QObject *parent=NULL) : QObject(parent) {}
-
-    QPrinterInfo opts;
-};
 
 class Printer : public QQuickItem
 {
@@ -23,7 +11,7 @@ class Printer : public QQuickItem
     Q_DISABLE_COPY(Printer)
 
     QSharedPointer<QQuickItemGrabResult> m_result;
-    QPrintDialog    m_printDialogue;
+    QPrintDialog    *m_printDialogue;
     QPrinter        *m_printer;
     bool            m_savingToFile;
 
@@ -73,14 +61,13 @@ public:
 public slots:
     bool print();
     bool saveImage(const QString &fileName, const QString &fileFormat, int quality);
-    PrinterOptions *setup();
+    bool setup();
 
     // Property Hooks:
     void setAntialias(bool toggle) { if( m_antialias == toggle ) return; m_antialias = toggle; emit antialiasChanged(); }
     void setFilePath(const QString &filepath) { if( m_filepath == filepath ) return; m_filepath = filepath; emit filePathChanged(); }
     void setItem( QQuickItem *item );
     void setMargins(double top, double right, double bottom, double left);
-    void setOptions( PrinterOptions *p );
     bool setPageSize( qreal width, qreal height, Unit unit );
     bool setPageSize( const QString &paperSize );
     void setPrinterName(const QString &printerName);

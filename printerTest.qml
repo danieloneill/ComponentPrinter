@@ -13,23 +13,30 @@ Window {
         color: 'white'
         width: printer.pageRect.width // When one sets a size using the 'setPageSize' method, this changes.
         height: printer.pageRect.height // When one sets a size using the 'setPageSize' method, this changes.
-        visible: false // Can be true or false, still works!
+        //visible: false // Can be true or false, still works!
 
         Rectangle {
             id: myAmazingComponent
             color: 'red'
 
-            width: 300
-            height: 300
+            width: parent.width * 0.25
+            height: parent.width * 0.25
             anchors.centerIn: parent // Or position it anywhere on your page.
 
             Rectangle {
                 id: alsoAmazing
                 color: 'blue'
 
-                width: 150
-                height: 150
+                width: parent.width * 0.5
+                height: parent.width * 0.5
                 anchors.centerIn: parent
+
+                Text {
+                    anchors.centerIn: parent
+                    font.pixelSize: parent.height * 0.5
+                    color: 'white'
+                    text: ''+printer.page
+                }
             }
         }
     }
@@ -39,8 +46,19 @@ Window {
         item: pageRect
         antialias: false
 
+        property int page: 1
+
         onPrintComplete: {
-            console.log('Print success.');
+            console.log('Page '+page+' printed.');
+            if( printer.page < 4 )
+            {
+                // Pretend we're printing multiple pages here...
+                printer.page++;
+                printer.print();
+            }
+        }
+        onPrintError: {
+            console.log("Print error!");
         }
 
         Component.onCompleted: {
@@ -67,16 +85,8 @@ Window {
         }
         text: 'Print'
         onClicked: {
-            var opts = printer.setup();
-            if( opts )
-            {
-                // If you don't do this any changes to the settings (in the dialogue) will be ignored:
-                printer.setOptions( opts );
-                // However when you call setOptions any previously specified parameters may be replaced.
-
-                delete opts; // Or don't.
+            if( printer.setup() )
                 printer.print();
-            }
 
             //printer.saveImage("test.png", 'png', 100);
         }
