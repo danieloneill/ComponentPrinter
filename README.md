@@ -130,7 +130,6 @@ Printer {
 * object getPaperSizes()
 * string getPrinterName()
 * int getResolution()
-* Status getStatus()
 
 
 ### Signals:
