@@ -23,6 +23,12 @@ Printer {
 * bool antialias
   * enable or disable antialiasing
 
+* bool monochrome
+  * enable or disable monochrome printing (eg, thermal printers)
+
+* int copyCount
+  * specify how many copies a call to 'print()' will yield
+
 * int resolution
   * the dpi to print at
 
@@ -120,6 +126,8 @@ Printer {
 * void setItem( object item )
 * void setPrinterName( string printerName )
 * void setResolution( int dpi )
+* void setMonochrome( bool monochrome )
+* void setCopyCount( int count )
 
 * bool getAntialias()
 * string getFilePath()
@@ -127,7 +135,8 @@ Printer {
 * object getPaperSizes()
 * string getPrinterName()
 * int getResolution()
-
+* bool getMonochrome()
+* int getCopyCount()
 
 ### Signals:
 
@@ -159,6 +168,11 @@ Printer {
 * sizeChanged
   * target printing size has changed
 
+* monochromeChanged
+  * flag for printing to monochrome has changed
+
+* copyCountChanged
+  * copy count has changed
 
 ### Example:
 
