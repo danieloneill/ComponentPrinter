@@ -9,10 +9,12 @@ Printer::Printer(QQuickItem *parent):
     QQuickItem(parent)
 {
     m_printer = new QPrinter();
-    m_antialias = false;
+    m_antialias = true;
+    m_monochrome = false;
     m_item = NULL;
     m_savingToFile = true;
     m_margins = QRectF(0, 0, 0, 0);
+    m_copyCount = 1;
 }
 
 Printer::~Printer()
@@ -202,13 +204,18 @@ void Printer::grabbed()
 
         QPainter painter;
         painter.begin(m_printer);
-        painter.setRenderHint(QPainter::Antialiasing, false);
-        painter.setRenderHint(QPainter::TextAntialiasing, false);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-        painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
+        painter.setRenderHint(QPainter::Antialiasing, m_antialias);
+        painter.setRenderHint(QPainter::TextAntialiasing, m_antialias);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
+        painter.setRenderHint(QPainter::HighQualityAntialiasing, m_antialias);
 
         painter.fillRect( m_printer->paperRect(), qRgba(255, 255, 255, 255) );
-        painter.drawImage( m_printer->paperRect(), img );
+
+        if( m_monochrome )
+            // Convert to monochrome, no dithering:
+            painter.drawImage( m_printer->paperRect(), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
+        else
+            painter.drawImage( m_printer->paperRect(), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
 
         painter.end();
         ret = true;
@@ -231,9 +238,9 @@ void Printer::setItem(QQuickItem *item)
 
 bool Printer::setup()
 {
-#ifdef Q_OS_WIN32
+//#ifdef Q_OS_WIN32
     m_printer->setOutputFormat(QPrinter::NativeFormat);
-#endif
+//#endif
 
     m_printDialogue = new QPrintDialog(m_printer);
     if( m_printDialogue->exec() == QDialog::Accepted )

@@ -14,8 +14,10 @@ class Printer : public QQuickItem
     QPrintDialog    *m_printDialogue;
     QPrinter        *m_printer;
     bool            m_savingToFile;
+    int             m_copyCount;
 
     bool m_antialias;
+    bool m_monochrome;
     QString m_filepath;
     QQuickItem *m_item;
     QRectF m_margins;
@@ -25,7 +27,9 @@ class Printer : public QQuickItem
     int m_fileQuality;
 
     Q_PROPERTY(bool antialias READ getAntialias WRITE setAntialias NOTIFY antialiasChanged)
+    Q_PROPERTY(bool monochrome READ getMonochrome WRITE setMonochrome NOTIFY monochromeChanged)
     Q_PROPERTY(int resolution READ getResolution WRITE setResolution NOTIFY resolutionChanged)
+    Q_PROPERTY(int copyCount READ getCopyCount WRITE setCopyCount NOTIFY copyCountChanged)
     Q_PROPERTY(QString filepath READ getFilePath WRITE setFilePath NOTIFY filePathChanged)
     Q_PROPERTY(QQuickItem* item READ getItem WRITE setItem NOTIFY itemChanged)
     Q_PROPERTY(QRectF pageRect READ getPageRect NOTIFY sizeChanged)
@@ -64,6 +68,7 @@ public slots:
     bool setup();
 
     // Property Hooks:
+    void setMonochrome(bool toggle) { if( m_monochrome == toggle ) return; m_monochrome = toggle; emit monochromeChanged(); }
     void setAntialias(bool toggle) { if( m_antialias == toggle ) return; m_antialias = toggle; emit antialiasChanged(); }
     void setFilePath(const QString &filepath) { if( m_filepath == filepath ) return; m_filepath = filepath; emit filePathChanged(); }
     void setItem( QQuickItem *item );
@@ -72,7 +77,9 @@ public slots:
     bool setPageSize( const QString &paperSize );
     void setPrinterName(const QString &printerName);
     void setResolution(int dpi) { if( m_printer->resolution() == dpi ) return; m_printer->setResolution( dpi ); emit resolutionChanged(); }
+    void setCopyCount(int count) { if( m_printer->copyCount() == count ) return; m_printer->setCopyCount( count ); emit copyCountChanged(); }
 
+    bool getMonochrome() { return m_monochrome; }
     bool getAntialias() { return m_antialias; }
     QString getFilePath() { return m_filepath; }
     QQuickItem *getItem() { return m_item; }
@@ -82,6 +89,7 @@ public slots:
     QStringList getPaperSizes();
     QString getPrinterName();
     int getResolution() { return m_printer->resolution(); }
+    int getCopyCount() { return m_printer->copyCount(); }
     Status getStatus();
 
 private slots:
@@ -89,6 +97,7 @@ private slots:
     void grabbed();
 
 signals:
+    void monochromeChanged();
     void antialiasChanged();
     void filePathChanged();
     void itemChanged();
@@ -97,6 +106,7 @@ signals:
     void printError();
     void printerNameChanged();
     void resolutionChanged();
+    void copyCountChanged();
     void sizeChanged();
 };
 
