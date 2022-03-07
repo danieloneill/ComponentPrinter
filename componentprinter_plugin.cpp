@@ -6,7 +6,7 @@
 void ComponentPrinterPlugin::registerTypes(const char *uri)
 {
     // @uri com.foxmoxie.Printer
-    qmlRegisterType<Printer>(uri, 1, 1, "Printer");
+    qmlRegisterType<Printer>(uri, 1, 2, "Printer");
 }
 
 
