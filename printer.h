@@ -76,16 +76,16 @@ public slots:
     bool abort();
 
     // Property Hooks:
-    void setMonochrome(bool toggle) { if( m_monochrome == toggle ) return; m_monochrome = toggle; emit monochromeChanged(); }
-    void setAntialias(bool toggle) { if( m_antialias == toggle ) return; m_antialias = toggle; emit antialiasChanged(); }
-    void setFilePath(const QString &filepath) { if( m_filepath == filepath ) return; m_filepath = filepath; emit filePathChanged(); }
+    void setMonochrome(bool toggle);
+    void setAntialias(bool toggle);
+    void setFilePath(const QString &filepath);
     void setItem( QQuickItem *item );
     void setMargins(double top, double right, double bottom, double left);
     bool setPageSize( qreal width, qreal height, Unit unit );
     bool setPageSize( const QString &paperSize );
     void setPrinterName(const QString &printerName);
-    void setResolution(int dpi) { if( m_printer->resolution() == dpi ) return; m_printer->setResolution( dpi ); emit resolutionChanged(); }
-    void setCopyCount(int count) { if( m_printer->copyCount() == count ) return; m_printer->setCopyCount( count ); emit copyCountChanged(); }
+    void setResolution(int dpi);
+    void setCopyCount(int count);
 
     bool getMonochrome() const { return m_monochrome; }
     bool getAntialias() const { return m_antialias; }

@@ -46,6 +46,66 @@ bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int 
     return grab();
 }
 
+bool Printer::setup()
+{
+    m_printer->setOutputFormat(QPrinter::NativeFormat);
+
+    m_printDialogue = new QPrintDialog(m_printer);
+    if( m_printDialogue->exec() == QDialog::Accepted )
+    {
+        m_printDialogue->deleteLater();
+        return true;
+    }
+
+    delete m_printDialogue;
+
+    return false;
+}
+
+bool Printer::open()
+{
+    if( m_sessionOpen )
+    {
+        qWarning() << tr("Printer::open called while already in a multipage session. (Call 'close' first.)");
+        return false;
+    }
+
+    m_sessionOpen = true;
+    m_painter = new QPainter();
+    if( !m_painter )
+    {
+        qWarning() << tr("Printer::open failed to instantiate new QPainter. (Are you out of memory?)");
+        return false;
+    }
+
+    if( !m_painter->begin(m_printer) )
+    {
+        qWarning() << tr("Failed to initialise QPainter to QPrintDevice.");
+        return false;
+    }
+
+    m_painter->setRenderHint(QPainter::Antialiasing, m_antialias);
+    m_painter->setRenderHint(QPainter::TextAntialiasing, m_antialias);
+    m_painter->setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
+
+    return true;
+}
+
+bool Printer::close()
+{
+    if( !m_sessionOpen )
+    {
+        qWarning() << tr("Printer::close called while not in multipage session.");
+        return false;
+    }
+
+    delete m_painter;
+    m_painter = nullptr;
+    m_sessionOpen = false;
+
+    return true;
+}
+
 bool Printer::newPage() const
 {
     if( !m_sessionOpen )
@@ -63,6 +123,135 @@ bool Printer::abort()
         close();
 
     return m_printer->abort();
+}
+
+void Printer::setMonochrome(bool toggle)
+{
+    if( m_monochrome == toggle )
+        return;
+
+    m_monochrome = toggle;
+    emit monochromeChanged();
+}
+
+void Printer::setAntialias(bool toggle)
+{
+    if( m_antialias == toggle )
+        return;
+
+    m_antialias = toggle;
+    emit antialiasChanged();
+}
+
+void Printer::setFilePath(const QString &filepath)
+{
+    if( m_filepath == filepath )
+        return;
+
+    m_filepath = filepath;
+    emit filePathChanged();
+}
+
+void Printer::setItem(QQuickItem *item)
+{
+     if( m_item == item )
+         return;
+
+     m_item = item;
+     emit itemChanged();
+}
+
+void Printer::setMargins(double top, double right, double bottom, double left)
+{
+    QRectF m( left, top, right-left, bottom-top );
+    if( m_margins == m )
+        return;
+
+    m_margins = m;
+    emit marginsChanged();
+}
+
+bool Printer::setPageSize( const QString &paperSize )
+{
+    QPageSize size;
+    // Run through each..
+    for( int x=0; x < QPageSize::LastPageSize; x++ )
+    {
+        size = QPageSize((QPageSize::PageSizeId)x);
+        if( size.name() == paperSize )
+        {
+            bool result = m_printer->setPageSize( size );
+            emit sizeChanged();
+            return result;
+        }
+    }
+
+    qWarning() << tr("Unknown paper size: ") << paperSize << tr(" (Refer to 'paperSizes()' for valid options.)");
+    return false;
+}
+
+bool Printer::setPageSize( qreal width, qreal height, Unit unit )
+{
+    QSizeF szf(width, height);
+    QPageSize size;
+
+    switch( unit )
+    {
+    case Millimeter:
+        size = QPageSize(szf, QPageSize::Millimeter);
+        break;
+    case Point:
+        size = QPageSize(szf, QPageSize::Point);
+        break;
+    case Inch:
+        size = QPageSize(szf, QPageSize::Inch);
+        break;
+    case Pica:
+        size = QPageSize(szf, QPageSize::Pica);
+        break;
+    case Didot:
+        size = QPageSize(szf, QPageSize::Didot);
+        break;
+    case Cicero:
+        size = QPageSize(szf, QPageSize::Cicero);
+        break;
+    case DevicePixel:
+        // Fanagle from DPI:
+        szf /= m_printer->resolution();
+        size = QPageSize(szf, QPageSize::Inch);
+        break;
+    }
+
+    bool result = m_printer->setPageSize(size);
+    emit sizeChanged();
+    return result;
+}
+
+void Printer::setPrinterName(const QString &printerName)
+{
+    if( m_printer->printerName() == printerName )
+        return;
+
+    m_printer->setPrinterName( printerName );
+    emit printerNameChanged();
+}
+
+void Printer::setResolution(int dpi)
+{
+    if( m_printer->resolution() == dpi )
+        return;
+
+    m_printer->setResolution( dpi );
+    emit resolutionChanged();
+}
+
+void Printer::setCopyCount(int count)
+{
+    if( m_printer->copyCount() == count )
+        return;
+
+    m_printer->setCopyCount( count );
+    emit copyCountChanged();
 }
 
 QPrinter::Unit qprinterUnitFromPrinterUnit(Printer::Unit unit)
@@ -120,62 +309,6 @@ QStringList Printer::getPaperSizes() const
     return results;
 }
 
-bool Printer::setPageSize( const QString &paperSize )
-{
-    QPageSize size;
-    // Run through each..
-    for( int x=0; x < QPageSize::LastPageSize; x++ )
-    {
-        size = QPageSize((QPageSize::PageSizeId)x);
-        if( size.name() == paperSize )
-        {
-            bool result = m_printer->setPageSize( size );
-            emit sizeChanged();
-            return result;
-        }
-    }
-
-    qWarning() << "Unknown paper size: " << paperSize << " (Refer to 'paperSizes()' for valid options.)";
-    return false;
-}
-
-bool Printer::setPageSize( qreal width, qreal height, Unit unit )
-{
-    QSizeF szf(width, height);
-    QPageSize size;
-
-    switch( unit )
-    {
-    case Millimeter:
-        size = QPageSize(szf, QPageSize::Millimeter);
-        break;
-    case Point:
-        size = QPageSize(szf, QPageSize::Point);
-        break;
-    case Inch:
-        size = QPageSize(szf, QPageSize::Inch);
-        break;
-    case Pica:
-        size = QPageSize(szf, QPageSize::Pica);
-        break;
-    case Didot:
-        size = QPageSize(szf, QPageSize::Didot);
-        break;
-    case Cicero:
-        size = QPageSize(szf, QPageSize::Cicero);
-        break;
-    case DevicePixel:
-        // Fanagle from DPI:
-        szf /= m_printer->resolution();
-        size = QPageSize(szf, QPageSize::Inch);
-        break;
-    }
-
-    bool result = m_printer->setPageSize(size);
-    emit sizeChanged();
-    return result;
-}
-
 Printer::Status Printer::getStatus() const
 {
     QPrinter::PrinterState state = m_printer->printEngine()->printerState();
@@ -197,63 +330,19 @@ bool Printer::grab()
 {
     if( !m_item )
     {
-        qWarning() << "Printer::grab: No item source specified. (Set it with the 'item' property.)";
+        qWarning() << tr("Printer::grab: No item source specified. (Set it with the 'item' property.)");
         return false;
     }
 
     QSharedPointer<QQuickItemGrabResult> res = m_item->grabToImage();
     if( !res )
     {
-        qWarning() << "Printer::grab: Grab failed for some reason. (Is the item loaded and rendered?)";
+        qWarning() << tr("Printer::grab: Grab failed for some reason. (Is the item loaded and rendered?)");
         return false;
     }
 
     connect( res.data(), SIGNAL(ready()), this, SLOT(grabbed()) );
     m_result = res;
-
-    return true;
-}
-
-bool Printer::open()
-{
-    if( m_sessionOpen )
-    {
-        qWarning() << tr("Printer::open called while already in a multipage session. (Call 'close' first.)");
-        return false;
-    }
-
-    m_sessionOpen = true;
-    m_painter = new QPainter();
-    if( !m_painter )
-    {
-        qWarning() << tr("Printer::open failed to instantiate new QPainter. (Are you out of memory?)");
-        return false;
-    }
-
-    if( !m_painter->begin(m_printer) )
-    {
-        qWarning() << tr("Failed to initialise QPainter to QPrintDevice.");
-        return false;
-    }
-
-    m_painter->setRenderHint(QPainter::Antialiasing, m_antialias);
-    m_painter->setRenderHint(QPainter::TextAntialiasing, m_antialias);
-    m_painter->setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
-
-    return true;
-}
-
-bool Printer::close()
-{
-    if( !m_sessionOpen )
-    {
-        qWarning() << tr("Printer::close called while not in multipage session.");
-        return false;
-    }
-
-    delete m_painter;
-    m_painter = nullptr;
-    m_sessionOpen = false;
 
     return true;
 }
@@ -304,50 +393,6 @@ void Printer::grabbed()
         emit printComplete();
     else
         emit printError();
-}
-
-void Printer::setItem(QQuickItem *item)
-{
-     if( m_item == item )
-         return;
-
-     m_item = item;
-     emit itemChanged();
-}
-
-bool Printer::setup()
-{
-    m_printer->setOutputFormat(QPrinter::NativeFormat);
-
-    m_printDialogue = new QPrintDialog(m_printer);
-    if( m_printDialogue->exec() == QDialog::Accepted )
-    {
-        m_printDialogue->deleteLater();
-        return true;
-    }
-
-    delete m_printDialogue;
-
-    return false;
-}
-
-void Printer::setMargins(double top, double right, double bottom, double left)
-{
-    QRectF m( left, top, right-left, bottom-top );
-    if( m_margins == m )
-        return;
-
-    m_margins = m;
-    emit marginsChanged();
-}
-
-void Printer::setPrinterName(const QString &printerName)
-{
-    if( m_printer->printerName() == printerName )
-        return;
-
-    m_printer->setPrinterName( printerName );
-    emit printerNameChanged();
 }
 
 QString Printer::getPrinterName() const
