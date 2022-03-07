@@ -65,15 +65,18 @@ Printer {
 * bool open()
   * open a printing session (start a new print job). *This MUST be called before print*
   
+* bool print()
+  * print the item using predeclared parameters.
+
+* bool newPage()
+  * begins a new page. this does not need to be called for the first page. doing so will result in your first page being blank.
+
 * bool close()
   * close (and submit) the open printing session. *This "mUsT" be called after printing is complete*
   
 * bool abort()
   * attempt to abort the current print job, and close the session.
   
-* bool print()
-  * print the item using predeclared parameters.
-
 * bool saveImage(string fileName, string fileFormat, int quality)
   * save an image of the component to an image file.
 
