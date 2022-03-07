@@ -8,13 +8,22 @@
 Printer::Printer(QQuickItem *parent):
     QQuickItem(parent)
 {
-    m_printer = new QPrinter();
+    m_printDialogue = nullptr;
+    m_printer = new QPrinter(QPrinter::ScreenResolution);
+    m_pagePrinted = false;
+    m_sessionOpen = false;
+    m_savingToFile = true;
+    m_copyCount = 1;
+    m_painter = nullptr;
     m_antialias = true;
     m_monochrome = false;
+    m_filepath.clear();
     m_item = NULL;
-    m_savingToFile = true;
     m_margins = QRectF(0, 0, 0, 0);
-    m_copyCount = 1;
+
+    m_fileDest.clear();
+    m_fileType.clear();
+    m_fileQuality = 0;
 }
 
 Printer::~Printer()
@@ -35,6 +44,25 @@ bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int 
     m_fileType = fileFormat;
     m_fileQuality = quality;
     return grab();
+}
+
+bool Printer::newPage() const
+{
+    if( !m_sessionOpen )
+    {
+        qWarning() << tr("Printer::newPage called while not in a multipage session. (Call Printer::open first.)");
+        return false;
+    }
+
+    return m_printer->newPage();
+}
+
+bool Printer::abort()
+{
+    if( m_sessionOpen )
+        close();
+
+    return m_printer->abort();
 }
 
 QPrinter::Unit qprinterUnitFromPrinterUnit(Printer::Unit unit)
@@ -69,17 +97,17 @@ QPrinter::Unit qprinterUnitFromPrinterUnit(Printer::Unit unit)
     return punit;
 }
 
-QRectF Printer::getPageRect(Unit unit)
+QRectF Printer::getPageRect(Unit unit) const
 {
     return m_printer->pageRect( qprinterUnitFromPrinterUnit(unit) );
 }
 
-QRectF Printer::getPaperRect(Unit unit)
+QRectF Printer::getPaperRect(Unit unit) const
 {
     return m_printer->paperRect( qprinterUnitFromPrinterUnit(unit) );
 }
 
-QStringList Printer::getPaperSizes()
+QStringList Printer::getPaperSizes() const
 {
     QStringList results;
     QPageSize size;
@@ -148,7 +176,7 @@ bool Printer::setPageSize( qreal width, qreal height, Unit unit )
     return result;
 }
 
-Printer::Status Printer::getStatus()
+Printer::Status Printer::getStatus() const
 {
     QPrinter::PrinterState state = m_printer->printEngine()->printerState();
     switch( state )
@@ -176,12 +204,81 @@ bool Printer::grab()
     QSharedPointer<QQuickItemGrabResult> res = m_item->grabToImage();
     if( !res )
     {
-        qWarning() << "Printer::saveImage: Grab failed for some reason. (Is the item visible and rendered?)";
+        qWarning() << "Printer::grab: Grab failed for some reason. (Is the item loaded and rendered?)";
         return false;
     }
 
     connect( res.data(), SIGNAL(ready()), this, SLOT(grabbed()) );
     m_result = res;
+
+    return true;
+}
+
+bool Printer::open()
+{
+    if( m_sessionOpen )
+    {
+        qWarning() << tr("Printer::open called while already in a multipage session. (Call 'close' first.)");
+        return false;
+    }
+
+    m_sessionOpen = true;
+    m_painter = new QPainter();
+    if( !m_painter )
+    {
+        qWarning() << tr("Printer::open failed to instantiate new QPainter. (Are you out of memory?)");
+        return false;
+    }
+
+    if( !m_painter->begin(m_printer) )
+    {
+        qWarning() << tr("Failed to initialise QPainter to QPrintDevice.");
+        return false;
+    }
+
+    m_painter->setRenderHint(QPainter::Antialiasing, m_antialias);
+    m_painter->setRenderHint(QPainter::TextAntialiasing, m_antialias);
+    m_painter->setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
+
+    return true;
+}
+
+bool Printer::close()
+{
+    if( !m_sessionOpen )
+    {
+        qWarning() << tr("Printer::close called while not in multipage session.");
+        return false;
+    }
+
+    delete m_painter;
+    m_painter = nullptr;
+    m_sessionOpen = false;
+
+    return true;
+}
+
+bool Printer::printGrab(const QImage &img)
+{
+    QMarginsF margins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom() );
+    if( !m_printer->setPageMargins( margins, QPageLayout::Millimeter ) )
+    {
+        qWarning() << tr("Printer: Failed to set page margin (in mm) as configured.");
+        return false;
+    }
+
+    // Less work if we're in a multipage session:
+    if( !m_sessionOpen )
+    {
+        qWarning() << tr("Printer: Attempt to print without first calling Printer::open(). (This behaviour changed in 1.2)");;
+        return false;
+    }
+
+    if( m_monochrome )
+        // Convert to monochrome, no dithering:
+        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
+    else
+        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img );
 
     return true;
 }
@@ -200,25 +297,7 @@ void Printer::grabbed()
         if( !m_filepath.isEmpty() )
             m_printer->setOutputFileName(m_filepath);
 
-        m_printer->setPageMargins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom(), QPrinter::Millimeter );
-
-        QPainter painter;
-        painter.begin(m_printer);
-        painter.setRenderHint(QPainter::Antialiasing, m_antialias);
-        painter.setRenderHint(QPainter::TextAntialiasing, m_antialias);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
-        painter.setRenderHint(QPainter::HighQualityAntialiasing, m_antialias);
-
-        painter.fillRect( m_printer->paperRect(), qRgba(255, 255, 255, 255) );
-
-        if( m_monochrome )
-            // Convert to monochrome, no dithering:
-            painter.drawImage( m_printer->paperRect(), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
-        else
-            painter.drawImage( m_printer->paperRect(), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
-
-        painter.end();
-        ret = true;
+        ret = printGrab(img);
     }
 
     if( ret )
@@ -238,9 +317,7 @@ void Printer::setItem(QQuickItem *item)
 
 bool Printer::setup()
 {
-//#ifdef Q_OS_WIN32
     m_printer->setOutputFormat(QPrinter::NativeFormat);
-//#endif
 
     m_printDialogue = new QPrintDialog(m_printer);
     if( m_printDialogue->exec() == QDialog::Accepted )
@@ -273,7 +350,7 @@ void Printer::setPrinterName(const QString &printerName)
     emit printerNameChanged();
 }
 
-QString Printer::getPrinterName()
+QString Printer::getPrinterName() const
 {
     return m_printer->printerName();
 }

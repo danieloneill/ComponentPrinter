@@ -9,7 +9,8 @@ Please note that the API has changed significantly since the 1.0 version.
 
 
 ```
-import com.foxmoxie.Printer 1.1
+import com.foxmoxie.Printer 1.1  // For Qt 5.x
+//import com.foxmoxie.Printer    // for Qt 6.x
 
 Printer {
     id: myPrinter
@@ -61,7 +62,15 @@ Printer {
 
 ### Methods:
 
-
+* bool open()
+  * open a printing session (start a new print job). *This MUST be called before print*
+  
+* bool close()
+  * close (and submit) the open printing session. *This "mUsT" be called after printing is complete*
+  
+* bool abort()
+  * attempt to abort the current print job, and close the session.
+  
 * bool print()
   * print the item using predeclared parameters.
 
@@ -176,24 +185,34 @@ Printer {
 
 ### Example:
 
+**NOTE**
+*In order to execute the example below (or most of the included example files) you must launch with a QApplication initialised due to the usage of QPrintDialog which requires this!*
 
 ```
-import QtQuick 2.4
-import QtQuick.Controls 1.2
-import QtQuick.Window 2.0
-import com.foxmoxie.Printer 1.1
+$ qml -a widget ./singlepage.qml
+```
+
+
+```
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Window
+import com.foxmoxie.Printer
 
 Window {
     width: 640
     height: 640
     visible: true
 
+    id: topWindow
+
     Rectangle {
-        id: pageRect
+        id: pageContainer
         color: 'white'
         width: printer.pageRect.width // When one sets a size using the 'setPageSize' method, this changes.
         height: printer.pageRect.height // When one sets a size using the 'setPageSize' method, this changes.
-        //visible: false // Can be true or false, still works!
+        visible: false // Can be true or false, still works!
+
 
         Rectangle {
             id: myAmazingComponent
@@ -215,7 +234,7 @@ Window {
                     anchors.centerIn: parent
                     font.pixelSize: parent.height * 0.5
                     color: 'white'
-                    text: ''+printer.page
+                    text: "😄"
                 }
             }
         }
@@ -223,29 +242,21 @@ Window {
 
     Printer {
         id: printer
-        item: pageRect
         antialias: false
+        monochrome: false
+        item: pageContainer
 
-        property int page: 1
+        onPrintComplete: console.log("Print complete.");
+        onPrintError: console.log("Print error!");
 
-        onPrintComplete: {
-            console.log('Page '+page+' printed.');
-            if( printer.page < 4 )
-            {
-                // Pretend we're printing multiple pages here...
-                printer.page++;
-                printer.print();
-            }
-        }
-        onPrintError: {
-            console.log("Print error!");
-        }
+        Component.onCompleted: scanPaperSizes();
 
-        Component.onCompleted: {
+        function scanPaperSizes()
+        {
             console.log( "Sizes: " );
-            var sz = printer.paperSizes;
-            for( var x=0; x < sz.length; x++ )
-                console.log(' - ' + sz[x]);
+            printer.paperSizes.forEach( function(sz) {
+                console.log(' - ' + sz);
+            } );
 
             // To use a standard size:
             printer.setPageSize( 'Letter / ANSI A' );
@@ -254,6 +265,14 @@ Window {
             // printer.setPageSize( 640, 480, Printer.DevicePixel );
             // Valid "units" are Millimeter, Point, Inch, Pica, Didot, Cicero, and DevicePixel.
             // These are resolution dependent (except DevicePixel) so I suggest having your resolution configured in advance.
+        }
+
+        function printPage()
+        {
+            // Open a print job, print the component (item), then close/submit the print job.
+            printer.open();
+            printer.print();
+            printer.close();
         }
     }
 
@@ -266,9 +285,7 @@ Window {
         text: 'Print'
         onClicked: {
             if( printer.setup() )
-                printer.print();
-
-            //printer.saveImage("test.png", 'png', 100);
+                printer.printPage();
         }
     }
 }

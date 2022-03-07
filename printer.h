@@ -13,8 +13,11 @@ class Printer : public QQuickItem
     QSharedPointer<QQuickItemGrabResult> m_result;
     QPrintDialog    *m_printDialogue;
     QPrinter        *m_printer;
+    bool            m_pagePrinted;
+    bool            m_sessionOpen;
     bool            m_savingToFile;
     int             m_copyCount;
+    QPainter        *m_painter;
 
     bool m_antialias;
     bool m_monochrome;
@@ -67,6 +70,11 @@ public slots:
     bool saveImage(const QString &fileName, const QString &fileFormat, int quality);
     bool setup();
 
+    bool open();
+    bool close();
+    bool newPage() const;
+    bool abort();
+
     // Property Hooks:
     void setMonochrome(bool toggle) { if( m_monochrome == toggle ) return; m_monochrome = toggle; emit monochromeChanged(); }
     void setAntialias(bool toggle) { if( m_antialias == toggle ) return; m_antialias = toggle; emit antialiasChanged(); }
@@ -79,22 +87,25 @@ public slots:
     void setResolution(int dpi) { if( m_printer->resolution() == dpi ) return; m_printer->setResolution( dpi ); emit resolutionChanged(); }
     void setCopyCount(int count) { if( m_printer->copyCount() == count ) return; m_printer->setCopyCount( count ); emit copyCountChanged(); }
 
-    bool getMonochrome() { return m_monochrome; }
-    bool getAntialias() { return m_antialias; }
-    QString getFilePath() { return m_filepath; }
-    QQuickItem *getItem() { return m_item; }
-    QRectF getMargins() { return m_margins; }
-    QRectF getPageRect(Unit unit=DevicePixel);
-    QRectF getPaperRect(Unit unit=DevicePixel);
-    QStringList getPaperSizes();
-    QString getPrinterName();
-    int getResolution() { return m_printer->resolution(); }
-    int getCopyCount() { return m_printer->copyCount(); }
-    Status getStatus();
+    bool getMonochrome() const { return m_monochrome; }
+    bool getAntialias() const { return m_antialias; }
+    QString getFilePath() const { return m_filepath; }
+    QQuickItem *getItem() const { return m_item; }
+    QRectF getMargins() const { return m_margins; }
+    QRectF getPageRect(Unit unit=DevicePixel) const;
+    QRectF getPaperRect(Unit unit=DevicePixel) const;
+    QStringList getPaperSizes() const;
+    QString getPrinterName() const;
+    int getResolution() const { return m_printer->resolution(); }
+    int getCopyCount() const { return m_printer->copyCount(); }
+    Status getStatus() const;
 
 private slots:
     bool grab();
     void grabbed();
+
+private:
+    bool printGrab(const QImage &img);
 
 signals:
     void monochromeChanged();

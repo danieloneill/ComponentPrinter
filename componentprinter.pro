@@ -15,7 +15,13 @@ HEADERS += \
     componentprinter_plugin.h \
     printer.h
 
-DISTFILES = qmldir
+DISTFILES = qmldir \
+    LICENSE \
+    README.md \
+    examples/imagecomponents.qml \
+    examples/imagefile.qml \
+    examples/multipage.qml \
+    examples/singlepage.qml
 
 !equals(_PRO_FILE_PWD_, $$OUT_PWD) {
     copy_qmldir.target = $$OUT_PWD/qmldir
