@@ -3,6 +3,13 @@ TARGET = ComponentPrinter
 QT += qml quick printsupport
 CONFIG += qt plugin
 
+qtHaveModule(printsupport) {
+    QT += printsupport
+}
+!qtHaveModule(printsupport) {
+    DEFINES += QT_NO_PRINTER
+}
+
 TARGET = $$qtLibraryTarget($$TARGET)
 uri = com.foxmoxie.Printer
 

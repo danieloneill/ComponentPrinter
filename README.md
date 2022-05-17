@@ -9,7 +9,7 @@ Please note that the API has changed significantly since the 1.0 version.
 
 
 ```
-import com.foxmoxie.Printer 1.1  // For Qt 5.x
+import com.foxmoxie.Printer 1.3  // For Qt 5.x
 //import com.foxmoxie.Printer    // for Qt 6.x
 
 Printer {
@@ -62,6 +62,12 @@ Printer {
 
 ### Methods:
 
+* bool grabImage(string fileFormat, function(ByteArray data) callback, int quality)
+  * provides an image of the item via provided callback function as a byte array.
+
+* bool saveImage(string fileName, string fileFormat, int quality)
+  * save an image of the component to an image file.
+
 * bool open()
   * open a printing session (start a new print job). *This MUST be called before print*
   
@@ -77,9 +83,6 @@ Printer {
 * bool abort()
   * attempt to abort the current print job, and close the session.
   
-* bool saveImage(string fileName, string fileFormat, int quality)
-  * save an image of the component to an image file.
-
 * bool setup()
   * display a print dialogue. configures the printer context and returns true if the user clicks 'print', false otherwise.
 

@@ -1,25 +1,34 @@
 #include "printer.h"
 
+#include <QBuffer>
 #include <QFileInfo>
 #include <QPainter>
-#include <QPrintEngine>
+#ifndef QT_NO_PRINTER
+# include <QPrintEngine>
+#endif
 #include <QQuickItemGrabResult>
+
+// Just for converting QByteArray:
+#include <QQmlEngine>
 
 Printer::Printer(QQuickItem *parent):
     QQuickItem(parent)
 {
+#ifndef QT_NO_PRINTER
     m_printDialogue = nullptr;
     m_printer = new QPrinter(QPrinter::ScreenResolution);
     m_pagePrinted = false;
     m_sessionOpen = false;
-    m_savingToFile = true;
     m_copyCount = 1;
     m_painter = nullptr;
     m_antialias = true;
     m_monochrome = false;
-    m_filepath.clear();
-    m_item = NULL;
     m_margins = QRectF(0, 0, 0, 0);
+    m_filepath.clear();
+#endif
+
+    m_mode = Printer::GrabOnly;
+    m_item = NULL;
 
     m_fileDest.clear();
     m_fileType.clear();
@@ -28,24 +37,38 @@ Printer::Printer(QQuickItem *parent):
 
 Printer::~Printer()
 {
+#ifndef QT_NO_PRINTER
     delete m_printer;
+#endif
 }
 
+#ifndef QT_NO_PRINTER
 bool Printer::print()
 {
-    m_savingToFile = false;
+    m_mode = Printer::Print;
+    return grab();
+}
+#endif
+
+bool Printer::grabImage(const QString &fileFormat, QJSValue callback, int quality)
+{
+    m_callback = callback;
+    m_mode = Printer::GrabOnly;
+    m_fileType = fileFormat;
+    m_fileQuality = quality;
     return grab();
 }
 
 bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int quality)
 {
-    m_savingToFile = true;
+    m_mode = Printer::PrintToFile;
     m_fileDest = fileName;
     m_fileType = fileFormat;
     m_fileQuality = quality;
     return grab();
 }
 
+#ifndef QT_NO_PRINTER
 bool Printer::setup()
 {
     m_printer->setOutputFormat(QPrinter::NativeFormat);
@@ -151,6 +174,7 @@ void Printer::setFilePath(const QString &filepath)
     m_filepath = filepath;
     emit filePathChanged();
 }
+#endif
 
 void Printer::setItem(QQuickItem *item)
 {
@@ -161,6 +185,7 @@ void Printer::setItem(QQuickItem *item)
      emit itemChanged();
 }
 
+#ifndef QT_NO_PRINTER
 void Printer::setMargins(double top, double right, double bottom, double left)
 {
     QRectF m( left, top, right-left, bottom-top );
@@ -325,6 +350,7 @@ Printer::Status Printer::getStatus() const
     }
     return Unknown;
 }
+#endif
 
 bool Printer::grab()
 {
@@ -347,6 +373,7 @@ bool Printer::grab()
     return true;
 }
 
+#ifndef QT_NO_PRINTER
 bool Printer::printGrab(const QImage &img)
 {
     QMarginsF margins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom() );
@@ -371,22 +398,45 @@ bool Printer::printGrab(const QImage &img)
 
     return true;
 }
+#endif
 
 void Printer::grabbed()
 {
     const QImage img = m_result.data()->image();
     m_result.clear();
 
-    bool ret;
+    bool ret = true;
 
-    if( m_savingToFile )
+    if( m_mode == Printer::PrintToFile )
         ret = img.save(m_fileDest, m_fileType.toStdString().c_str(), m_fileQuality);
-    else
+#ifndef QT_NO_PRINTER
+    else if( m_mode == Printer::Print )
     {
         if( !m_filepath.isEmpty() )
             m_printer->setOutputFileName(m_filepath);
 
         ret = printGrab(img);
+    }
+#endif
+
+    else if( m_callback.isCallable() )
+    {
+        QImage image;
+        QByteArray ba;
+        QBuffer buffer(&ba);
+        buffer.open(QIODevice::WriteOnly);
+        ret = img.save(&buffer, m_fileType.toStdString().c_str(), m_fileQuality);
+        buffer.close();
+
+        if( ret )
+        {
+            QQmlEngine *jse = qmlEngine(this);
+            jse->collectGarbage();
+
+            QJSValueList args;
+            args << jse->toScriptValue<QByteArray>(ba);
+                m_callback.call( args );
+        }
     }
 
     if( ret )
@@ -395,7 +445,9 @@ void Printer::grabbed()
         emit printError();
 }
 
+#ifndef QT_NO_PRINTER
 QString Printer::getPrinterName() const
 {
     return m_printer->printerName();
 }
+#endif
