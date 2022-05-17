@@ -317,9 +317,9 @@ Window {
 
 The horrendously ugly example app should appear as follows:
 
-![Example App](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/imagecomponents.qml.1.png?raw=true "Yech")
+![Example App](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/singlepage.qml.1.png?raw=true "Yech")
 
 
 The resulting file (print.pdf by default) or page printed should resemble:
 
-![Result](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/imagecomponents.qml.2.png?raw=true "Result")
+![Result](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/singlepage.qml.2.png?raw=true "Result")
