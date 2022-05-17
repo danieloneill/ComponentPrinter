@@ -83,7 +83,7 @@ public:
 
 public slots:
 #ifndef QT_NO_PRINTER
-    bool print();
+    bool print(QJSValue callback=QJSValue());
     bool setup();
     bool open();
     bool close();
@@ -91,8 +91,8 @@ public slots:
     bool abort();
 #endif
 
-    bool grabImage(const QString &fileFormat, QJSValue callback, int quality=100);
-    bool saveImage(const QString &fileName, const QString &fileFormat, int quality);
+    bool grabImage(const QString &fileFormat, int quality=100, QJSValue callback=QJSValue());
+    bool saveImage(const QString &fileName, const QString &fileFormat, int quality, QJSValue callback=QJSValue());
 
     // Property Hooks:
     void setItem( QQuickItem *item );

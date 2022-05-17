@@ -43,25 +43,27 @@ Printer::~Printer()
 }
 
 #ifndef QT_NO_PRINTER
-bool Printer::print()
+bool Printer::print(QJSValue callback)
 {
     m_mode = Printer::Print;
+    m_callback = callback;
     return grab();
 }
 #endif
 
-bool Printer::grabImage(const QString &fileFormat, QJSValue callback, int quality)
+bool Printer::grabImage(const QString &fileFormat, int quality, QJSValue callback)
 {
-    m_callback = callback;
     m_mode = Printer::GrabOnly;
+    m_callback = callback;
     m_fileType = fileFormat;
     m_fileQuality = quality;
     return grab();
 }
 
-bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int quality)
+bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int quality, QJSValue callback)
 {
     m_mode = Printer::PrintToFile;
+    m_callback = callback;
     m_fileDest = fileName;
     m_fileType = fileFormat;
     m_fileQuality = quality;
@@ -93,7 +95,6 @@ bool Printer::open()
         return false;
     }
 
-    m_sessionOpen = true;
     m_painter = new QPainter();
     if( !m_painter )
     {
@@ -111,6 +112,7 @@ bool Printer::open()
     m_painter->setRenderHint(QPainter::TextAntialiasing, m_antialias);
     m_painter->setRenderHint(QPainter::SmoothPixmapTransform, m_antialias);
 
+    m_sessionOpen = true;
     return true;
 }
 
@@ -383,7 +385,6 @@ bool Printer::printGrab(const QImage &img)
         return false;
     }
 
-    // Less work if we're in a multipage session:
     if( !m_sessionOpen )
     {
         qWarning() << tr("Printer: Attempt to print without first calling Printer::open(). (This behaviour changed in 1.2)");;
@@ -405,10 +406,21 @@ void Printer::grabbed()
     const QImage img = m_result.data()->image();
     m_result.clear();
 
+    QQmlEngine *jse = qmlEngine(this);
+    jse->collectGarbage();
+
     bool ret = true;
 
     if( m_mode == Printer::PrintToFile )
+    {
         ret = img.save(m_fileDest, m_fileType.toStdString().c_str(), m_fileQuality);
+        if( m_callback.isCallable() )
+        {
+            QJSValueList args;
+            args << ret;
+            m_callback.call(args);
+        }
+    }
 #ifndef QT_NO_PRINTER
     else if( m_mode == Printer::Print )
     {
@@ -416,9 +428,14 @@ void Printer::grabbed()
             m_printer->setOutputFileName(m_filepath);
 
         ret = printGrab(img);
+        if( m_callback.isCallable() )
+        {
+            QJSValueList args;
+            args << ret;
+            m_callback.call(args);
+        }
     }
 #endif
-
     else if( m_callback.isCallable() )
     {
         QImage image;
@@ -430,14 +447,13 @@ void Printer::grabbed()
 
         if( ret )
         {
-            QQmlEngine *jse = qmlEngine(this);
-            jse->collectGarbage();
-
             QJSValueList args;
             args << jse->toScriptValue<QByteArray>(ba);
-                m_callback.call( args );
+            m_callback.call( args );
         }
     }
+
+    m_callback = QJSValue();
 
     if( ret )
         emit printComplete();

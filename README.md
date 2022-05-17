@@ -62,17 +62,17 @@ Printer {
 
 ### Methods:
 
-* bool grabImage(string fileFormat, function(ByteArray data) callback, int quality)
+* bool grabImage(string fileFormat, [int quality], [function(ByteArray data) callback])
   * provides an image of the item via provided callback function as a byte array.
 
-* bool saveImage(string fileName, string fileFormat, int quality)
-  * save an image of the component to an image file.
+* bool saveImage(string fileName, string fileFormat, int quality, [function(bool success) callback])
+  * save an image of the item to an image file, optionally with a callback upon completion.
 
 * bool open()
   * open a printing session (start a new print job). *This MUST be called before print*
   
-* bool print()
-  * print the item using predeclared parameters.
+* bool print([function(bool success) callback])
+  * print the item using predeclared parameters, optionally with a callback upon completion. (Note that this method will usually return before printing is complete, so calling *close* immediately will likely break your entire world. Instead wait for printComplete, printError, or close in your provided callback function.)
 
 * bool newPage()
   * begins a new page. this does not need to be called for the first page. doing so will result in your first page being blank.

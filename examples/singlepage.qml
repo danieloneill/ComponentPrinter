@@ -76,14 +76,6 @@ Window {
             // Valid "units" are Millimeter, Point, Inch, Pica, Didot, Cicero, and DevicePixel.
             // These are resolution dependent (except DevicePixel) so I suggest having your resolution configured in advance.
         }
-
-        function printPage()
-        {
-            // Open a print job, print the component (item), then close/submit the print job.
-            printer.open();
-            printer.print();
-            printer.close();
-        }
     }
 
     Button {
@@ -94,8 +86,27 @@ Window {
         }
         text: 'Print'
         onClicked: {
-            if( printer.setup() )
-                printer.printPage();
+            if( !printer.setup() )
+            {
+                console.log("Cancelled in Print Setup.");
+                return;
+            }
+
+            // Open a print job, print the component (item), then close/submit the print job.
+            if( !printer.open() )
+            {
+                console.log("Failed to open printer!");
+                return;
+            }
+
+            console.log("Okay, now we print!");
+
+            // This doesn't happen immediately, so the close will happen when the component
+            // sends either the printComplete or printError signal:
+            printer.print( function() {
+                console.log("Job complete, closing printer context.");
+                printer.close();
+            } );
         }
     }
 }

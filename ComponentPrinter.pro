@@ -1,5 +1,5 @@
 TEMPLATE = lib
-TARGET = ComponentPrinter
+TARGET = Printer
 QT += qml quick printsupport
 CONFIG += qt plugin
 
