@@ -200,6 +200,12 @@ $ qml -a widget ./singlepage.qml
 
 
 ```
+/////////////////////////////////////////////////////////////////////////////
+// This example uses QPrintDialog which requires a QApplication instance.
+// If running from QML runtime utility, specify the apptype:
+//  $ qml -a widget singlepage.qml
+/////////////////////////////////////////////////////////////////////////////
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
@@ -272,14 +278,6 @@ Window {
             // Valid "units" are Millimeter, Point, Inch, Pica, Didot, Cicero, and DevicePixel.
             // These are resolution dependent (except DevicePixel) so I suggest having your resolution configured in advance.
         }
-
-        function printPage()
-        {
-            // Open a print job, print the component (item), then close/submit the print job.
-            printer.open();
-            printer.print();
-            printer.close();
-        }
     }
 
     Button {
@@ -290,10 +288,38 @@ Window {
         }
         text: 'Print'
         onClicked: {
-            if( printer.setup() )
-                printer.printPage();
+            if( !printer.setup() )
+            {
+                console.log("Cancelled in Print Setup.");
+                return;
+            }
+
+            // Open a print job, print the component (item), then close/submit the print job.
+            if( !printer.open() )
+            {
+                console.log("Failed to open printer!");
+                return;
+            }
+
+            console.log("Okay, now we print!");
+
+            // This doesn't happen immediately, so the close will happen when the component
+            // sends either the printComplete or printError signal:
+            printer.print( function() {
+                console.log("Job complete, closing printer context.");
+                printer.close();
+            } );
         }
     }
 }
 
 ```
+
+The horrendously ugly example app should appear as follows:
+
+![Example App](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/imagecomponents.qml.1.png?raw=true "Yech")
+
+
+The resulting file (print.pdf by default) or page printed should resemble:
+
+![Result](https://github.com/danieloneill/ComponentPrinter/blob/master/examples/imagecomponents.qml.2.png?raw=true "Result")
