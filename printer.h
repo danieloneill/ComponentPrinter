@@ -61,21 +61,21 @@ public:
 
 #ifndef QT_NO_PRINTER
     typedef enum {
-        Millimeter = 0,
-        Point,
-        Inch,
-        Pica,
-        Didot,
-        Cicero,
+        Millimeter = QPageSize::Millimeter,
+        Point = QPageSize::Point,
+        Inch = QPageSize::Inch,
+        Pica = QPageSize::Pica,
+        Didot = QPageSize::Didot,
+        Cicero = QPageSize::Cicero,
         DevicePixel
     } Unit;
     Q_ENUMS(Unit)
 
     typedef enum {
-        Idle,
-        Active,
-        Aborted,
-        Error,
+        Idle = QPrinter::Idle,
+        Active = QPrinter::Active,
+        Aborted = QPrinter::Aborted,
+        Error = QPrinter::Error,
         Unknown
     } Status;
     Q_ENUMS(Status)

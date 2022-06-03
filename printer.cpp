@@ -224,28 +224,13 @@ bool Printer::setPageSize( qreal width, qreal height, Unit unit )
 
     switch( unit )
     {
-    case Millimeter:
-        size = QPageSize(szf, QPageSize::Millimeter);
-        break;
-    case Point:
-        size = QPageSize(szf, QPageSize::Point);
-        break;
-    case Inch:
-        size = QPageSize(szf, QPageSize::Inch);
-        break;
-    case Pica:
-        size = QPageSize(szf, QPageSize::Pica);
-        break;
-    case Didot:
-        size = QPageSize(szf, QPageSize::Didot);
-        break;
-    case Cicero:
-        size = QPageSize(szf, QPageSize::Cicero);
-        break;
     case DevicePixel:
         // Fanagle from DPI:
         szf /= m_printer->resolution();
         size = QPageSize(szf, QPageSize::Inch);
+        break;
+    default:
+        size = QPageSize(szf, (QPageSize::Unit)unit);
         break;
     }
 
@@ -281,46 +266,14 @@ void Printer::setCopyCount(int count)
     emit copyCountChanged();
 }
 
-QPrinter::Unit qprinterUnitFromPrinterUnit(Printer::Unit unit)
-{
-    QPrinter::Unit punit;
-    switch( unit )
-    {
-    case Printer::Millimeter:
-        punit = QPrinter::Millimeter;
-        break;
-    case Printer::Point:
-        punit = QPrinter::Point;
-        break;
-    case Printer::Pica:
-        punit = QPrinter::Pica;
-        break;
-    case Printer::Inch:
-        punit = QPrinter::Inch;
-        break;
-    case Printer::Didot:
-        punit = QPrinter::Didot;
-        break;
-    case Printer::Cicero:
-        punit = QPrinter::Cicero;
-        break;
-    case Printer::DevicePixel:
-        punit = QPrinter::DevicePixel;
-        break;
-    default:
-        punit = (QPrinter::Unit)unit;
-    }
-    return punit;
-}
-
 QRectF Printer::getPageRect(Unit unit) const
 {
-    return m_printer->pageRect( qprinterUnitFromPrinterUnit(unit) );
+    return m_printer->pageRect( (QPrinter::Unit)unit );
 }
 
 QRectF Printer::getPaperRect(Unit unit) const
 {
-    return m_printer->paperRect( qprinterUnitFromPrinterUnit(unit) );
+    return m_printer->paperRect( (QPrinter::Unit)unit );
 }
 
 QStringList Printer::getPaperSizes() const
@@ -339,18 +292,7 @@ QStringList Printer::getPaperSizes() const
 Printer::Status Printer::getStatus() const
 {
     QPrinter::PrinterState state = m_printer->printEngine()->printerState();
-    switch( state )
-    {
-        case QPrinter::Idle:
-            return Idle;
-        case QPrinter::Active:
-            return Active;
-        case QPrinter::Aborted:
-            return Aborted;
-        case QPrinter::Error:
-            return Error;
-    }
-    return Unknown;
+    return (Printer::Status)state;
 }
 #endif
 
