@@ -93,6 +93,10 @@ public slots:
 
     bool grabImage(const QString &fileFormat, int quality=100, QJSValue callback=QJSValue());
     bool saveImage(const QString &fileName, const QString &fileFormat, int quality, QJSValue callback=QJSValue());
+#ifndef QT_NO_PRINTER
+    bool printImage(const QImage &img);
+    bool printImageData(const QByteArray &img);
+#endif
 
     // Property Hooks:
     void setItem( QQuickItem *item );
@@ -126,9 +130,6 @@ public slots:
 private slots:
     bool grab();
     void grabbed();
-
-private:
-    bool printGrab(const QImage &img);
 
 signals:
     void itemChanged();

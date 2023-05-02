@@ -71,6 +71,35 @@ bool Printer::saveImage(const QString &fileName, const QString &fileFormat, int 
 }
 
 #ifndef QT_NO_PRINTER
+bool Printer::printImage(const QImage &img)
+{
+    QMarginsF margins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom() );
+    if( !m_printer->setPageMargins( margins, QPageLayout::Millimeter ) )
+    {
+        qWarning() << tr("Printer: Failed to set page margin (in mm) as configured.");
+        return false;
+    }
+
+    if( !m_sessionOpen )
+    {
+        qWarning() << tr("Printer: Attempt to print without first calling Printer::open(). (This behaviour changed in 1.2)");;
+        return false;
+    }
+
+    if( m_monochrome )
+        // Convert to monochrome, no dithering:
+        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
+    else
+        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img );
+
+    return true;
+}
+
+bool Printer::printImageData(const QByteArray &data)
+{
+    return printImage( QImage::fromData(data) );
+}
+
 bool Printer::setup()
 {
     m_printer->setOutputFormat(QPrinter::NativeFormat);
@@ -317,32 +346,6 @@ bool Printer::grab()
     return true;
 }
 
-#ifndef QT_NO_PRINTER
-bool Printer::printGrab(const QImage &img)
-{
-    QMarginsF margins( m_margins.left(), m_margins.top(), m_margins.right(), m_margins.bottom() );
-    if( !m_printer->setPageMargins( margins, QPageLayout::Millimeter ) )
-    {
-        qWarning() << tr("Printer: Failed to set page margin (in mm) as configured.");
-        return false;
-    }
-
-    if( !m_sessionOpen )
-    {
-        qWarning() << tr("Printer: Attempt to print without first calling Printer::open(). (This behaviour changed in 1.2)");;
-        return false;
-    }
-
-    if( m_monochrome )
-        // Convert to monochrome, no dithering:
-        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img.convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::ThresholdDither) );
-    else
-        m_painter->drawImage( m_printer->paperRect(QPrinter::DevicePixel), img );
-
-    return true;
-}
-#endif
-
 void Printer::grabbed()
 {
     const QImage img = m_result.data()->image();
@@ -369,7 +372,7 @@ void Printer::grabbed()
         if( !m_filepath.isEmpty() )
             m_printer->setOutputFileName(m_filepath);
 
-        ret = printGrab(img);
+        ret = printImage(img);
         if( m_callback.isCallable() )
         {
             QJSValueList args;
