@@ -74,6 +74,9 @@ Printer {
 * bool print([function(bool success) callback])
   * print the item using predeclared parameters, optionally with a callback upon completion. (Note that this method will usually return before printing is complete, so calling *close* immediately will likely break your entire world. Instead wait for printComplete, printError, or close in your provided callback function.)
 
+* bool printImageData( blob data )
+  * print a jpeg/png/etc. image from a ArrayBuffer. if format isn't supported, thing go kerplow (maybe, undefined behaviour)
+
 * bool newPage()
   * begins a new page. this does not need to be called for the first page. doing so will result in your first page being blank.
 
