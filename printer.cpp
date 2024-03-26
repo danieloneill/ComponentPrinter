@@ -42,6 +42,15 @@ Printer::~Printer()
 #endif
 }
 
+bool Printer::printingSupported() const
+{
+#ifdef QT_NO_PRINTER
+    return false;
+#else
+    return true;
+#endif
+}
+
 #ifndef QT_NO_PRINTER
 bool Printer::print(QJSValue callback)
 {

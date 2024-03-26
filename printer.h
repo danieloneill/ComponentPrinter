@@ -42,6 +42,7 @@ private:
     QJSValue    m_callback;
 
     Q_PROPERTY(QQuickItem* item READ getItem WRITE setItem NOTIFY itemChanged)
+    Q_PROPERTY(bool printingSupported READ printingSupported CONSTANT)
 #ifndef QT_NO_PRINTER
     Q_PROPERTY(QString filepath READ getFilePath WRITE setFilePath NOTIFY filePathChanged)
     Q_PROPERTY(bool antialias READ getAntialias WRITE setAntialias NOTIFY antialiasChanged)
@@ -82,6 +83,8 @@ public:
 #endif
 
 public slots:
+    bool printingSupported() const;
+
 #ifndef QT_NO_PRINTER
     bool print(QJSValue callback=QJSValue());
     bool setup();
